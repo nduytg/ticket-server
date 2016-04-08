@@ -18,6 +18,8 @@
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
 #define PORT 60000				//Port mac dinh cho server
 #define BACKLOG 10
+#define SO_CHUYEN 3
+#define MAXSIZE 4096
 
 typedef struct Type
 {
@@ -29,18 +31,112 @@ typedef struct Type
 typedef struct Route
 {
 	int code;			//Ma danh dau tuyen xe
-	Type A;
-	Type B;
-	Type C;
+	Type l[SO_CHUYEN];
+	//Type A = l[0]
+	//Type B = l[1]
+	//Type C = l[2]
 }Route;
 
-void usage();
+typedef struct Request
+{
+	int route;
+	int type;	type tu 0 toi 2
+	int number;
+}Request;
+
+//Bien toan cuc
+Route HCM_HN, HCM_HUE, HCM_DALAT;
+
+void initInfo()
+{
+	//HCM-HN: 1
+	//HCM-Hue: 2
+	//HCM-Da Lat: 3
+	HCM_HN.code = 1;
+	HCM_HUE.code = 2;
+	HCM_DALAT.code = 3;
+	//--------------
+	
+	//HCM-HN
+	HCM_HN.l[0].number = 50;	HCM_HN.l[0].price = 100;
+	HCM_HN.l[1].number = 80;	HCM_HN.l[1].price = 80;
+	HCM_HN.l[2].number = 40;	HCM_HN.l[2].price = 60;
+	//--------------
+	
+	//HCM-HUE
+	HCM_HUE.l[0].number = 35;	HCM_HUE.l[0].price = 60;
+	HCM_HUE.l[1].number = 54;	HCM_HUE.l[1].price = 50;
+	HCM_HUE.l[2].number = 48;	HCM_HUE.l[2].price = 40;
+	//--------------
+	
+	//HCM_DALAT
+	HCM_HN.l[0].number = 70;	HCM_HN.l[0].price = 120;
+	HCM_HN.l[1].number = 50;	HCM_HN.l[1].price = 90;
+	HCM_HN.l[2].number = 30;	HCM_HN.l[2].price = 70;
+	//--------------
+}
 
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints);
 int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
+void *handle_request(void *cli_socket);
 
+char *packInt(int a)
+{
+	buf[0] = a>>24;
+	buf[1] = a>>16;
+	buf[2] = a>>8;
+	buf[3] = a;
+	buf[4] = '\0';
+}
+
+int unpackInt(char *buf)
+{
+	return (buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
+}
+
+char *packMyStruct(Route route)
+{
+	char *buf = (char*)malloc(sizeof(Route) + 1);
+	strcpy(buf,"");
+	
+	temp = packInt(route.code);
+	strcat(buf,temp);
+	free(temp);
+	
+	for(int i=0; i < SO_CHUYEN; i++)
+	{
+		temp = packInt(route.l[i].number);
+		strcat(buf,temp);
+		free(temp);
+		temp = packInt(route.l[i].price);
+		strcat(buf,temp);
+		free(temp);
+	}
+	buf[sizeof(Route)] = '\0';
+	return buf;
+}
+
+Route unpackMyStruct(char *buf)
+{
+	
+}
+
+void *printHello(void *threadid)
+{
+	long tid;
+	tid = (long)threadid;
+	printf("Hello World! It's me, thread #%ld!\n",tid);
+	pthread_exit(NULL);
+}
+
+
+
+
+
+//Ham set cac gia tri mac dinh cho server
+void initInfo();
 
 //MO HINH 2: lap song song theo phien lam viec
 // + MO HINH 9: MAXTHREADS
@@ -53,41 +149,10 @@ int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
 
 //Ham xuy ly 1 connection
 //close socket cua tieu trinh
-
-void *printHello(void *threadid)
-{
-	long tid;
-	tid = (long)threadid;
-	printf("Hello World! It's me, thread #%ld!\n",tid);
-	pthread_exit(NULL);
-}
-
-void *handle_request(void *cli_socket)
-{
-	int socket = (int)cli_socket;
-	printf("Handle_request() with socket: %d\n",socket);
-	
-	
-	//Thread -> handle_request
-	
-	//B1: Send thong tin ve cho client
-	
-	//B2: Nhan request tu client
-	
-	//B3: Tinh toan va check semaphore
-	
-	//B4: Tra ket qua (ok hoac ko)
-	//Thread
-}
-
-//Bien toan cuc
-Route HCM_HN, HCM_HUE, HCM_DALAT;
-
-//Ham set cac gia tri mac dinh cho server
-void initInfo();
-
 int main()
 {
+	//printf("Size of int: %d\n",sizeof(int));		//Size of (int) = 4
+	//printf("Size of Route: %d\n",sizeof(Route));	//Size of (Route) = 28
 	//Set gia tri cho bien toan cuc
 	initInfo();
 	
@@ -150,34 +215,9 @@ int main()
 	exit(0);
 }
 
-void initInfo()
-{
-	//HCM-HN: 1
-	//HCM-Hue: 2
-	//HCM-Da Lat: 3
-	HCM_HN.code = 1;
-	HCM_HUE.code = 2;
-	HCM_DALAT = 3;
-	//--------------
-	
-	//HCM-HN
-	HCM_HN.A.number = 50;	HCM_HN.A.price = 100;
-	HCM_HN.B.number = 80;	HCM_HN.B.price = 80;
-	HCM_HN.C.number = 40;	HCM_HN.C.price = 60;
-	//--------------
-	
-	//HCM-HUE
-	HCM_HUE.A.number = 35;	HCM_HUE.A.price = 60;
-	HCM_HUE.B.number = 54;	HCM_HUE.B.price = 50;
-	HCM_HUE.C.number = 48;	HCM_HUE.C.price = 40;
-	//--------------
-	
-	//HCM_DALAT
-	HCM_HN.A.number = 70;	HCM_HN.A.price = 120;
-	HCM_HN.B.number = 50;	HCM_HN.B.price = 90;
-	HCM_HN.C.number = 30;	HCM_HN.C.price = 70;
-	//--------------
-}
+
+
+
 
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints)
@@ -234,7 +274,6 @@ int createTCPsocket()
 	//hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
 	//hints.ai_socktype = SOCK_STREAM;
 	
-	
 	if( (mySocket = socket(AF_UNSPEC, SOCK_STREAM, 0)) == -1)
 	{
 		printf("Failed to create socket()\n");
@@ -258,7 +297,36 @@ int acceptTCPsocket(int serverSock, struct sockaddr_storage addr)
 	return newSock;
 }
 
-void handle_request(int cli_socket);
+void *handle_request(void *cli_socket)
+{
+	int socket = (int)cli_socket;
+	printf("Handle_request() with socket: %d\n",socket);
+	
+	
+	//Thread -> handle_request
+	
+	//B1: Send thong tin ve cho client
+	char *buf;
+	buf = packMyStruct(HCM_HN);
+	send(socket,buf,sizeof(buf),0);
+	free(buf);
+	buf = packMyStruct(HCM_HUE);
+	send(socket,buf,sizeof(buf),0);
+	free(buf);
+	buf = packMyStruct(HCM_DALAT);
+	send(socket,buf,sizeof(buf),0);
+	free(buf);
+	//B2: Nhan request tu client
+	buf = (char*)malloc(MAZSIZE);
+	recv(sock,buf,MAXSIZE,0);
+	
+	//Giai ma request ra
+	//B3: Tinh toan va check semaphore
+	
+	//B4: Tra ket qua (ok hoac ko)
+	//Thread
+}
+
 
 /*
 void threadSample()
