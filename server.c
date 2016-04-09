@@ -40,7 +40,7 @@ typedef struct Route
 typedef struct Request
 {
 	int route;
-	int type;	type tu 0 toi 2
+	int type;	//type tu 0 toi 2
 	int number;
 }Request;
 
@@ -75,7 +75,6 @@ void initInfo()
 	HCM_HN.l[2].number = 30;	HCM_HN.l[2].price = 70;
 	//--------------
 }
-
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints);
 int createTCPsocket();
@@ -120,7 +119,8 @@ char *packMyStruct(Route route)
 
 Route unpackMyStruct(char *buf)
 {
-	
+	Route tmp;
+	tmp.code = unpackInt();
 }
 
 void *printHello(void *threadid)
