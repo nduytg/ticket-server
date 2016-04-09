@@ -50,34 +50,7 @@ typedef struct Request
 Route HCM_HN, HCM_HUE, HCM_DALAT;
 pthread_mutex_t myMutex;
 
-void initInfo()
-{
-	//HCM-HN: 1
-	//HCM-Hue: 2
-	//HCM-Da Lat: 3
-	HCM_HN.code = 1;
-	HCM_HUE.code = 2;
-	HCM_DALAT.code = 3;
-	//--------------
-	
-	//HCM-HN
-	HCM_HN.l[0].number = 50;	HCM_HN.l[0].price = 100;
-	HCM_HN.l[1].number = 80;	HCM_HN.l[1].price = 80;
-	HCM_HN.l[2].number = 40;	HCM_HN.l[2].price = 60;
-	//--------------
-	
-	//HCM-HUE
-	HCM_HUE.l[0].number = 35;	HCM_HUE.l[0].price = 60;
-	HCM_HUE.l[1].number = 54;	HCM_HUE.l[1].price = 50;
-	HCM_HUE.l[2].number = 48;	HCM_HUE.l[2].price = 40;
-	//--------------
-	
-	//HCM_DALAT
-	HCM_HN.l[0].number = 70;	HCM_HN.l[0].price = 120;
-	HCM_HN.l[1].number = 50;	HCM_HN.l[1].price = 90;
-	HCM_HN.l[2].number = 30;	HCM_HN.l[2].price = 70;
-	//--------------
-}
+void initInfo();
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints);
 int createTCPsocket();
@@ -106,8 +79,8 @@ void cp(char *dest, char *src, int offset, int len)
 	for(int i=0; i<len; i++)
 	{
 		dest[i+offset] = src[i];
-		printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
-		printf("Src[%d] = %d\n",i,(int)src[i]);
+		//printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
+		//printf("Src[%d] = %d\n",i,(int)src[i]);
 	}
 }
 
@@ -215,50 +188,21 @@ int main()
 	//*********Ket thuc chay thu**************
 	
 	//----Chay thu pack voi unpackMystruct----
-	//char *buf = (char*)malloc(sizeof(Route) + 1);
 	unsigned char *buf;
-	
-	
 	printRouteInfo(HCM_HN);
 	buf = packMyStruct(HCM_HN);
-	//printf("Buffer: %s\n",buf);
 	HCM_HN = unpackMyStruct(buf);
 	printf("\n\nGia tri sau khi pack-unpack\n\n");
 	printRouteInfo(HCM_HN);
 	free(buf);
-	
-	/*
-
-	*/
-	
-	/*
-	buf = packInt(4);
-	printf("My buf: %s-\n",buf);
-	int a = unpackInt(buf);
-	printf("My int: %d\n",a);
-	free(buf);
-	
-	
-	buf = packInt(227);
-	a = unpackInt(buf);
-	printf("My int: %d\n",a);
-	free(buf);
-	exit(1);
-	*/
 	//----------------------------------------
 		
-
-	//printf("Size of int: %d\n",sizeof(int));		//Size of (int) = 4
-	//printf("Size of Route: %d\n",sizeof(Route));	//Size of (Route) = 28
-	//Set gia tri cho bien toan cuc
 	int retcode;
 	int server_socket;
 	int ticket_client;
 	struct addrinfo hints;
-	
 	printf("Server cong ty duong sat X\n");
 
-	
 	//Create and bind in this function
 	server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
 	listen(server_socket, BACKLOG);
@@ -270,14 +214,12 @@ int main()
 		struct sockaddr_storage client_addr;
 		ticket_client = acceptTCPsocket(server_socket, client_addr);
 		
-		
 		//Thread -> handle_request
 		if (pthread_create(&thread_id, NULL, handle_request, (void*) &ticket_client) < 0)
 		{
 			printf("Failed when created thread\n");
 			//exit(1);
 		}
-		
 		//Join thread
 		pthread_join(thread_id, NULL);
 		
@@ -286,6 +228,36 @@ int main()
 	close(server_socket);
 	pthead_exit(NULL);
 	exit(0);
+}
+//-------------------Het ham main--------------------------------
+
+void initInfo()
+{
+	//HCM-HN: 1
+	//HCM-Hue: 2
+	//HCM-Da Lat: 3
+	HCM_HN.code = 1;
+	HCM_HUE.code = 2;
+	HCM_DALAT.code = 3;
+	//--------------
+	
+	//HCM-HN
+	HCM_HN.l[0].number = 50;	HCM_HN.l[0].price = 100;
+	HCM_HN.l[1].number = 80;	HCM_HN.l[1].price = 80;
+	HCM_HN.l[2].number = 40;	HCM_HN.l[2].price = 60;
+	//--------------
+	
+	//HCM-HUE
+	HCM_HUE.l[0].number = 35;	HCM_HUE.l[0].price = 60;
+	HCM_HUE.l[1].number = 54;	HCM_HUE.l[1].price = 50;
+	HCM_HUE.l[2].number = 48;	HCM_HUE.l[2].price = 40;
+	//--------------
+	
+	//HCM_DALAT
+	HCM_HN.l[0].number = 70;	HCM_HN.l[0].price = 120;
+	HCM_HN.l[1].number = 50;	HCM_HN.l[1].price = 90;
+	HCM_HN.l[2].number = 30;	HCM_HN.l[2].price = 70;
+	//--------------
 }
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints)
