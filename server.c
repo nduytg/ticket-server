@@ -84,7 +84,7 @@ int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
 void *handle_request(void *cli_socket);
 
-char *packInt(int a)
+unsigned char *packInt(int a)
 {
 	char *buf = (char*)malloc(sizeof(int) + 1);
 	buf[0] = a>>24;
@@ -95,62 +95,85 @@ char *packInt(int a)
 	return buf;
 }
 
-int unpackInt(char *buf)
+int unpackInt(unsigned char *buf)
 {
 	return ((buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
 }
 
-char *packMyStruct(Route route)
+//Ham memcpy tu che ^^
+void cp(char *dest, char *src, int offset, int len)
 {
-	char *buf = (char*)malloc(sizeof(Route) + 1);
-	char *temp;
-	strcpy(buf,"");
+	for(int i=0; i<len; i++)
+	{
+		dest[i+offset] = src[i];
+		printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
+		printf("Src[%d] = %d\n",i,(int)src[i]);
+	}
+}
+
+unsigned char *packMyStruct(Route route)
+{
+	unsigned char *buf = (unsigned char*)malloc(sizeof(Route) + 1);
+	unsigned char *temp;
+	int offset = 0;
 	
 	temp = packInt(route.code);
-	strcat(buf,temp);
+	cp(buf,temp,offset,4);
+	offset += 4;
 	free(temp);
 	
 	for(int i = 0; i < SO_CHUYEN; i++)
 	{
 		temp = packInt(route.l[i].number);
-		strcat(buf,temp);
+		cp(buf,temp,offset, 4);
+		offset+=4;
 		free(temp);
+
 		temp = packInt(route.l[i].price);
-		strcat(buf,temp);
+		cp(buf,temp,offset, 4);
+		offset+=4;
 		free(temp);
 	}
+	
 	buf[sizeof(Route)] = '\0';
+	
+	for(int i=0; i<29; i++)
+	{
+		printf("Buf[%d] = %d\n",i,(int)buf[i]);
+	}
 	return buf;
 }
 
-Route unpackMyStruct(char *buf)
+Route unpackMyStruct(unsigned char *buf)
 {
 	Route rt;
-	char *tmp = (char*)malloc(sizeof(int) + 1);
-	char *pt;		//con tro de luu vi tri unpack
-	tmp ="";
+	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
+	unsigned char *pt;		//con tro de luu vi tri unpack
 	pt = buf;
 	
-	strncpy(tmp,pt,4);
+	cp(tmp,pt,0,4);
 	pt += 4;
 	rt.code = unpackInt(tmp);
+	//printf("Rt.code = %d\n",rt.code);
 	
 	for(int i = 0; i < SO_CHUYEN; i++)
 	{
-		strncpy(tmp,pt,4);
+		cp(tmp,pt,0,4);
 		pt+=4;
 		rt.l[i].number = unpackInt(tmp);
-		strncpy(tmp,pt,4);
+		
+		cp(tmp,pt,0,4);
 		pt+=4;
 		rt.l[i].price = unpackInt(tmp);
 	}
 	free(tmp);
+	return rt;
 }
 
 void printRouteInfo(Route rt)
 {
 	printf("Route %d\n",rt.code);
-	printf("Bieu gia ve\n\n");
+	printf("Bieu gia ve\n");
 	
 	for(int i=0; i<SO_CHUYEN; i++)
 	{
@@ -163,7 +186,7 @@ void printRouteInfo(Route rt)
 			
 		printf("%d ve - Gia: %d USD\n",rt.l[i].number, rt.l[i].price);
 	}
-	printf("-------------------------------\n\n");
+	printf("----------------------------------\n\n");
 }
 
 //Ham set cac gia tri mac dinh cho server
@@ -193,14 +216,35 @@ int main()
 	
 	//----Chay thu pack voi unpackMystruct----
 	//char *buf = (char*)malloc(sizeof(Route) + 1);
-	char *buf;
+	unsigned char *buf;
+	
 	
 	printRouteInfo(HCM_HN);
 	buf = packMyStruct(HCM_HN);
+	//printf("Buffer: %s\n",buf);
 	HCM_HN = unpackMyStruct(buf);
-	printf("Gia tri sau khi pack-unpack\n\n");
+	printf("\n\nGia tri sau khi pack-unpack\n\n");
 	printRouteInfo(HCM_HN);
 	free(buf);
+	
+	/*
+
+	*/
+	
+	/*
+	buf = packInt(4);
+	printf("My buf: %s-\n",buf);
+	int a = unpackInt(buf);
+	printf("My int: %d\n",a);
+	free(buf);
+	
+	
+	buf = packInt(227);
+	a = unpackInt(buf);
+	printf("My int: %d\n",a);
+	free(buf);
+	exit(1);
+	*/
 	//----------------------------------------
 		
 
