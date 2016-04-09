@@ -17,15 +17,15 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT 60000				//Port mac dinh cho server
+#define PORT 60000					//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
 #define MAXSIZE 4096
 
-#define HCM-HaNoi 1
-#define HCM-Hue 2
-#define HCM-DaLat 3
+//~ #define HCM-HaNoi 1
+//~ #define HCM-Hue 2
+//~ #define HCM-DaLat 3
 //--------------------END OF DEFINE------------------------
 
 
@@ -205,7 +205,13 @@ Route unpackMyStruct(unsigned char *buf)
 
 void printRouteInfo(Route rt)
 {
-	printf("Route %d\n",rt.code);
+	if(rt.code == 1)
+		printf("Tuyen HCM - Ha Noi\n");
+	if(rt.code == 2)
+		printf("Tuyen HCM - Hue\n");
+	if(rt.code == 3)
+		printf("Tuyen HCM - Da Lat\n");
+	//printf("Route %d\n",rt.code);
 	printf("Bieu gia ve\n");
 	
 	for(int i=0; i<SO_LOAI; i++)
@@ -290,6 +296,7 @@ int main()
 
 	//Create and bind in this function
 	server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
+	printf("Track 1\n");
 	listen(server_socket, BACKLOG);
 	
 	//Accept ket noi tu day
@@ -311,7 +318,7 @@ int main()
 	};
 	
 	close(server_socket);
-	pthread_mutex_destroy(myMutex);
+	pthread_mutex_destroy(&myMutex);
 	pthead_exit(NULL);
 	exit(0);
 }
@@ -348,6 +355,7 @@ void initInfo()
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints)
 {	
+	int retcode;
 	int mySocket;
 	struct addrinfo *p;
 	
@@ -367,8 +375,9 @@ int createTCPserverSocket(char *host, int port, struct addrinfo hints)
 		port = port;
 	}
 		
-	
-	if((getaddrinfo(host, port, &hints, &p)) != 0)
+	//char buffer[20];
+	//itoa(port,buffer,10);
+	if((retcode = getaddrinfo(host, port, &hints, &p)) != 0)
 	{
 		printf("Failed to getaddrinfo()\n");
 		return -1;
@@ -400,7 +409,7 @@ int createTCPsocket()
 	//hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
 	//hints.ai_socktype = SOCK_STREAM;
 	
-	if( (mySocket = socket(AF_UNSPEC, SOCK_STREAM, 0)) == -1)
+	if( (mySocket = socket(PF_INET, SOCK_STREAM, 0)) == -1)
 	{
 		printf("Failed to create socket()\n");
 		return -1;
@@ -412,7 +421,8 @@ int createTCPsocket()
 
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr)
 {
-	int newSock = accept(serverSock,(struct sockaddr *)&addr, sizeof(addr));
+	socklen_t addr_size = sizeof(addr);
+	int newSock = accept(serverSock,(struct sockaddr *)&addr, &addr_size);
 	if (newSock == -1)
 	{
 		printf("Failed at accept()\n");
@@ -427,7 +437,7 @@ void *handle_request(void *cli_socket)
 	printf("Handle_request() with socket: %d\n",socket);
 	
 	//B1: Send thong tin ve cho client
-	char *buf;
+	unsigned char *buf;
 	buf = packMyStruct(HCM_HN);
 	send(socket,buf,sizeof(buf),0);
 	free(buf);
@@ -441,7 +451,7 @@ void *handle_request(void *cli_socket)
 	free(buf);
 	
 	//B2: Nhan request tu client
-	buf = (char*)malloc(MAXSIZE);
+	buf = (unsigned char*)malloc(MAXSIZE);
 	recv(socket,buf,MAXSIZE,0);
 	
 	//Giai ma request ra
@@ -450,9 +460,9 @@ void *handle_request(void *cli_socket)
 	int cost = 0, remain = 0;
 	
 	//B3: Tinh toan va check semaphore
-	switch (rq.route):
+	switch (rq.route)
 	{
-		case HCM_HN.code:
+		case 1:
 		
 			printf("\nClient requests HCM-HN\n");
 			for(int i=0; i<SO_LOAI; i++)
@@ -472,7 +482,7 @@ void *handle_request(void *cli_socket)
 			}
 			break;
 			
-		case HCM_HUE.code:
+		case 2:
 		
 			printf("\nClient requests HCM-HUE\n");
 			for(int i=0; i<SO_LOAI; i++)
@@ -492,7 +502,7 @@ void *handle_request(void *cli_socket)
 			}
 			break;
 			
-		case HCM_DALAT.code:
+		case 3:
 		
 			printf("\nClient requests HCM-DALAT\n");
 			for(int i=0; i<SO_LOAI; i++)
@@ -527,10 +537,10 @@ void *handle_request(void *cli_socket)
 	}
 
 	//B4: Tra ket qua (ok hoac ko)
-	send(socket,&cost,sizeof(cost),0)
+	send(socket,&cost,sizeof(cost),0);
 	if(cost > 0)
 	{
-		send(socket,&reamain,sizeof(remain),0);
+		send(socket,&remain,sizeof(remain),0);
 	}	
 
 	close(socket);
