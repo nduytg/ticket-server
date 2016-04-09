@@ -1,6 +1,7 @@
 //MSSV: 1312084
 //Ticket Server
 
+//------------------------INCLUDE--------------------------
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,16 +11,23 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
-//#include <mutex.h>
-//#include <Ticket.h>
+//--------------------END OF INCLUDE-----------------------
 
+
+//------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
 #define PORT 60000				//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define MAXSIZE 4096
+#define HCM_HN 1
+#define HCM_HUE 2
+#define HCM_DALAT 3
+//--------------------END OF DEFINE------------------------
 
+
+//------------------------STRUCT--------------------------
 typedef struct Type
 {
 	int number;			//So luong loai ve con lai
@@ -45,13 +53,17 @@ typedef struct Request
 	int type;	//type tu 0 toi 2
 	int number;
 }Request;
+//----------------------END OF STRUCT----------------------
 
-//Bien toan cuc
+
+//---------------------GLOBAL VARIABLES--------------------
 Route HCM_HN, HCM_HUE, HCM_DALAT;
 pthread_mutex_t myMutex;
+//------------------------END OF GVs-----------------------
 
+//------------------------PROTOTYPES-----------------------
+//Ham set cac gia tri mac dinh cho server
 void initInfo();
-
 int createTCPserverSocket(char *host, int port, struct addrinfo hints);
 int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
@@ -82,6 +94,52 @@ void cp(char *dest, char *src, int offset, int len)
 		//printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
 		//printf("Src[%d] = %d\n",i,(int)src[i]);
 	}
+}
+
+unsigned char *packMyRequest(Request rq)
+{
+	unsigned char *buf = (unsigned char*)malloc(sizeof(Request) + 1);
+	unsigned char *temp;
+	int offset = 0;
+	
+	temp = packInt(rq.route);
+	cp(buf,temp,offset,4);
+	offset += 4;
+	free(temp);
+	
+	temp = packInt(rq.type);
+	cp(buf,temp,offset,4);
+	offset += 4;
+	free(temp);
+	
+	temp = packInt(rq.number);
+	cp(buf,temp,offset,4);
+	//offset += 4;
+	free(temp);
+	return buf;
+}
+
+Request unpackMyRequest(unsigned char *buf)
+{
+	Request rq;
+	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
+	unsigned char *pt;		//con tro de luu vi tri unpack
+	pt = buf;
+	
+	cp(tmp,pt,0,4);
+	rq.route = unpackInt(tmp);
+	pt += 4;
+	
+	cp(tmp,pt,0,4);
+	rq.type = unpackInt(tmp);
+	pt += 4;
+	
+	cp(tmp,pt,0,4);
+	rq.number = unpackInt(tmp);
+	//pt += 4;
+	
+	free(tmp);
+	return rq;
 }
 
 unsigned char *packMyStruct(Route route)
@@ -162,8 +220,12 @@ void printRouteInfo(Route rt)
 	printf("----------------------------------\n\n");
 }
 
-//Ham set cac gia tri mac dinh cho server
-void initInfo();
+void printRequest(Request rq)
+{
+	printf("
+}
+//---------------------END OF PROTOTYPES-------------------
+
 
 int main()
 {
@@ -188,6 +250,7 @@ int main()
 	//*********Ket thuc chay thu**************
 	
 	//----Chay thu pack voi unpackMystruct----
+	/*
 	unsigned char *buf;
 	printRouteInfo(HCM_HN);
 	buf = packMyStruct(HCM_HN);
@@ -195,6 +258,18 @@ int main()
 	printf("\n\nGia tri sau khi pack-unpack\n\n");
 	printRouteInfo(HCM_HN);
 	free(buf);
+	*/
+	
+	unsigned char *buf;
+	
+	
+	
+	free(buf);
+	
+	//Chay thu pack-unpack request
+	
+	
+	
 	//----------------------------------------
 		
 	int retcode;
