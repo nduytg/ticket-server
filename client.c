@@ -1,6 +1,5 @@
 //MSSV: 1312084
-//	Ticket Client
-//
+//Ticket Client
 
 #include <stdio.h>
 #include <string.h>

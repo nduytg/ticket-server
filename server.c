@@ -1,6 +1,5 @@
 //MSSV: 1312084
-//	Ticket Server
-//
+//Ticket Server
 
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +30,7 @@ typedef struct Type
 typedef struct Route
 {
 	int code;			//Ma danh dau tuyen xe
-	Type l[SO_CHUYEN];
+	Type l [SO_CHUYEN];
 	//Type A = l[0]
 	//Type B = l[1]
 	//Type C = l[2]
@@ -39,13 +38,17 @@ typedef struct Route
 
 typedef struct Request
 {
-	int route;
+	//HCM-HN: 1
+	//HCM-Hue: 2
+	//HCM-Da Lat: 3
+	int route;	//Type tu 1 toi 3
 	int type;	//type tu 0 toi 2
 	int number;
 }Request;
 
 //Bien toan cuc
 Route HCM_HN, HCM_HUE, HCM_DALAT;
+pthread_mutex_t myMutex;
 
 void initInfo()
 {
@@ -104,7 +107,7 @@ char *packMyStruct(Route route)
 	strcat(buf,temp);
 	free(temp);
 	
-	for(int i=0; i < SO_CHUYEN; i++)
+	for(int i = 0; i < SO_CHUYEN; i++)
 	{
 		temp = packInt(route.l[i].number);
 		strcat(buf,temp);
@@ -119,51 +122,36 @@ char *packMyStruct(Route route)
 
 Route unpackMyStruct(char *buf)
 {
-	Route tmp;
-	tmp.code = unpackInt();
+	Route rt;
+	char *tmp = (char*)malloc(sizeof(int) + 1);
+	char *pt;		//con tro de luu vi tri unpack
+	tmp ="";
+	pt = buf;
+	
+	strncpy(tmp,pt,4);
+	pt += 4;
+	rt.code = unpackInt(tmp);
+	
+	for(int i = 0; i < SO_CHUYEN; i++)
+	{
+		strncpy(tmp,pt,4);
+		pt+=4;
+		rt.l[i].number = unpackInt(tmp);
+		strncpy(tmp,pt,4);
+		pt+=4;
+		rt.l[i].price = unpackInt(tmp);
+	}
+	free(tmp);
 }
-
-void *printHello(void *threadid)
-{
-	long tid;
-	tid = (long)threadid;
-	printf("Hello World! It's me, thread #%ld!\n",tid);
-	pthread_exit(NULL);
-}
-
-
-
 
 
 //Ham set cac gia tri mac dinh cho server
 void initInfo();
 
-//MO HINH 2: lap song song theo phien lam viec
-// + MO HINH 9: MAXTHREADS
-
-//Tao socket
-//Bind
-//Listen
-//while (true) => sock = accept()
-// => tao tieu trinh handle request (handle_request, ss)
-
-//Ham xuy ly 1 connection
-//close socket cua tieu trinh
 int main()
 {
-	//printf("Size of int: %d\n",sizeof(int));		//Size of (int) = 4
-	//printf("Size of Route: %d\n",sizeof(Route));	//Size of (Route) = 28
-	//Set gia tri cho bien toan cuc
-	initInfo();
-	
-	pthread_t threads[POOL_SIZE];
-	int retcode;
-	long t;
-	
-
-	
-	
 	//**Chay thu thread voi tham so don gian**
+	/*
 	for(t = 0; t < POOL_SIZE; t++)
 	{
 		printf("In main: creating thread: %ld\n",t);
@@ -176,20 +164,28 @@ int main()
 	}
 	//pthead_exit(NULL);
 	exit(1);
+	* */
 	//*********Ket thuc chay thu**************
-	
-	
+		
+
+	//printf("Size of int: %d\n",sizeof(int));		//Size of (int) = 4
+	//printf("Size of Route: %d\n",sizeof(Route));	//Size of (Route) = 28
+	//Set gia tri cho bien toan cuc
+	int retcode;
 	int server_socket;
 	int ticket_client;
 	struct addrinfo hints;
 	
 	printf("Server cong ty duong sat X\n");
+	//Khoi tao cac bien toan cuc
+	initInfo();
 	
 	//Create and bind in this function
 	server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
-	listen(server_socket,BACKLOG);
+	listen(server_socket, BACKLOG);
 	
 	//Accept ket noi tu day
+	pthread_t thread_id;
 	while(1)
 	{
 		struct sockaddr_storage client_addr;
@@ -197,26 +193,21 @@ int main()
 		
 		
 		//Thread -> handle_request
+		if (pthread_create(&thread_id, NULL, handle_request, (void*) &ticket_client) < 0)
+		{
+			printf("Failed when created thread\n");
+			//exit(1);
+		}
 		
-		//B1: Send thong tin ve cho client
+		//Join thread
+		pthread_join(thread_id, NULL);
 		
-		//B2: Nhan request tu client
-		
-		//B3: Tinh toan va check semaphore
-		
-		//B4: Tra ket qua (ok hoac ko)
-		//Thread
 	};
 	
-	
-	
 	close(server_socket);
-	
+	pthead_exit(NULL);
 	exit(0);
 }
-
-
-
 
 
 
@@ -284,8 +275,6 @@ int createTCPsocket()
 	return mySocket;
 }
 
-
-
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr)
 {
 	int newSock = accept(serverSock,(struct sockaddr *)&addr, sizeof(addr));
@@ -310,12 +299,15 @@ void *handle_request(void *cli_socket)
 	buf = packMyStruct(HCM_HN);
 	send(socket,buf,sizeof(buf),0);
 	free(buf);
+	
 	buf = packMyStruct(HCM_HUE);
 	send(socket,buf,sizeof(buf),0);
 	free(buf);
+	
 	buf = packMyStruct(HCM_DALAT);
 	send(socket,buf,sizeof(buf),0);
 	free(buf);
+	
 	//B2: Nhan request tu client
 	buf = (char*)malloc(MAZSIZE);
 	recv(sock,buf,MAXSIZE,0);
@@ -329,6 +321,14 @@ void *handle_request(void *cli_socket)
 
 
 /*
+void *printHello(void *threadid)
+{
+	long tid;
+	tid = (long)threadid;
+	printf("Hello World! It's me, thread #%ld!\n",tid);
+	pthread_exit(NULL);
+}
+* 
 void threadSample()
 {
 	int retcode;
