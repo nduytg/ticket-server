@@ -21,9 +21,9 @@
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define MAXSIZE 4096
-#define HCM_HN 1
-#define HCM_HUE 2
-#define HCM_DALAT 3
+//#define HCM_HN 1
+//#define HCM_HUE 2
+//#define HCM_DALAT 3
 //--------------------END OF DEFINE------------------------
 
 
@@ -222,7 +222,10 @@ void printRouteInfo(Route rt)
 
 void printRequest(Request rq)
 {
-	printf("
+	printf("\n----REQUEST----\n");
+	printf("Loai chuyen: %d\n",rq.route);
+	printf("Loai ve: %d\n",rq.type);
+	printf("Gia ve: %d\n\n",rq.number);
 }
 //---------------------END OF PROTOTYPES-------------------
 
@@ -260,16 +263,21 @@ int main()
 	free(buf);
 	*/
 	
-	unsigned char *buf;
-	
-	
-	
-	free(buf);
-	
 	//Chay thu pack-unpack request
+	/*
+	unsigned char *buf;
+	Request rq;
+	rq.route = 1;
+	rq.type = 1;
+	rq.number = 90;
+	printRequest(rq);
+	buf = packMyRequest(rq);
 	
-	
-	
+	Request nrq = unpackMyRequest(buf);
+	printRequest(nrq);
+	free(buf);
+	exit(0);
+	*/
 	//----------------------------------------
 		
 	int retcode;
