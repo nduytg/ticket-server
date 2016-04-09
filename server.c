@@ -86,21 +86,24 @@ void *handle_request(void *cli_socket);
 
 char *packInt(int a)
 {
+	char *buf = (char*)malloc(sizeof(int) + 1);
 	buf[0] = a>>24;
 	buf[1] = a>>16;
 	buf[2] = a>>8;
 	buf[3] = a;
 	buf[4] = '\0';
+	return buf;
 }
 
 int unpackInt(char *buf)
 {
-	return (buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
+	return ((buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
 }
 
 char *packMyStruct(Route route)
 {
 	char *buf = (char*)malloc(sizeof(Route) + 1);
+	char *temp;
 	strcpy(buf,"");
 	
 	temp = packInt(route.code);
@@ -144,12 +147,33 @@ Route unpackMyStruct(char *buf)
 	free(tmp);
 }
 
+void printRouteInfo(Route rt)
+{
+	printf("Route %d\n",rt.code);
+	printf("Bieu gia ve\n\n");
+	
+	for(int i=0; i<SO_CHUYEN; i++)
+	{
+		if(i==0)
+			printf("Ve loai A: ");
+		if(i==1)
+			printf("Ve loai B: ");
+		if(i==2)
+			printf("Ve loai C: ");
+			
+		printf("%d ve - Gia: %d USD\n",rt.l[i].number, rt.l[i].price);
+	}
+	printf("-------------------------------\n\n");
+}
 
 //Ham set cac gia tri mac dinh cho server
 void initInfo();
 
 int main()
 {
+	//Khoi tao cac bien toan cuc
+	initInfo();
+	
 	//**Chay thu thread voi tham so don gian**
 	/*
 	for(t = 0; t < POOL_SIZE; t++)
@@ -166,6 +190,18 @@ int main()
 	exit(1);
 	* */
 	//*********Ket thuc chay thu**************
+	
+	//----Chay thu pack voi unpackMystruct----
+	//char *buf = (char*)malloc(sizeof(Route) + 1);
+	char *buf;
+	
+	printRouteInfo(HCM_HN);
+	buf = packMyStruct(HCM_HN);
+	HCM_HN = unpackMyStruct(buf);
+	printf("Gia tri sau khi pack-unpack\n\n");
+	printRouteInfo(HCM_HN);
+	free(buf);
+	//----------------------------------------
 		
 
 	//printf("Size of int: %d\n",sizeof(int));		//Size of (int) = 4
@@ -177,8 +213,7 @@ int main()
 	struct addrinfo hints;
 	
 	printf("Server cong ty duong sat X\n");
-	//Khoi tao cac bien toan cuc
-	initInfo();
+
 	
 	//Create and bind in this function
 	server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
@@ -208,8 +243,6 @@ int main()
 	pthead_exit(NULL);
 	exit(0);
 }
-
-
 
 int createTCPserverSocket(char *host, int port, struct addrinfo hints)
 {	
@@ -291,9 +324,6 @@ void *handle_request(void *cli_socket)
 	int socket = (int)cli_socket;
 	printf("Handle_request() with socket: %d\n",socket);
 	
-	
-	//Thread -> handle_request
-	
 	//B1: Send thong tin ve cho client
 	char *buf;
 	buf = packMyStruct(HCM_HN);
@@ -309,8 +339,8 @@ void *handle_request(void *cli_socket)
 	free(buf);
 	
 	//B2: Nhan request tu client
-	buf = (char*)malloc(MAZSIZE);
-	recv(sock,buf,MAXSIZE,0);
+	buf = (char*)malloc(MAXSIZE);
+	recv(socket,buf,MAXSIZE,0);
 	
 	//Giai ma request ra
 	//B3: Tinh toan va check semaphore
