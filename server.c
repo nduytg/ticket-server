@@ -20,10 +20,12 @@
 #define PORT 60000				//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
+#define SO_LOAI 3
 #define MAXSIZE 4096
-//#define HCM_HN 1
-//#define HCM_HUE 2
-//#define HCM_DALAT 3
+
+#define HCM-HaNoi 1
+#define HCM-Hue 2
+#define HCM-DaLat 3
 //--------------------END OF DEFINE------------------------
 
 
@@ -38,7 +40,7 @@ typedef struct Type
 typedef struct Route
 {
 	int code;			//Ma danh dau tuyen xe
-	Type l [SO_CHUYEN];
+	Type l [SO_LOAI];
 	//Type A = l[0]
 	//Type B = l[1]
 	//Type C = l[2]
@@ -58,7 +60,7 @@ typedef struct Request
 
 //---------------------GLOBAL VARIABLES--------------------
 Route HCM_HN, HCM_HUE, HCM_DALAT;
-pthread_mutex_t myMutex;
+pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 //------------------------END OF GVs-----------------------
 
 //------------------------PROTOTYPES-----------------------
@@ -153,7 +155,7 @@ unsigned char *packMyStruct(Route route)
 	offset += 4;
 	free(temp);
 	
-	for(int i = 0; i < SO_CHUYEN; i++)
+	for(int i = 0; i < SO_LOAI; i++)
 	{
 		temp = packInt(route.l[i].number);
 		cp(buf,temp,offset, 4);
@@ -187,7 +189,7 @@ Route unpackMyStruct(unsigned char *buf)
 	rt.code = unpackInt(tmp);
 	//printf("Rt.code = %d\n",rt.code);
 	
-	for(int i = 0; i < SO_CHUYEN; i++)
+	for(int i = 0; i < SO_LOAI; i++)
 	{
 		cp(tmp,pt,0,4);
 		pt+=4;
@@ -206,7 +208,7 @@ void printRouteInfo(Route rt)
 	printf("Route %d\n",rt.code);
 	printf("Bieu gia ve\n");
 	
-	for(int i=0; i<SO_CHUYEN; i++)
+	for(int i=0; i<SO_LOAI; i++)
 	{
 		if(i==0)
 			printf("Ve loai A: ");
@@ -309,6 +311,7 @@ int main()
 	};
 	
 	close(server_socket);
+	pthread_mutex_destroy(myMutex);
 	pthead_exit(NULL);
 	exit(0);
 }
@@ -442,10 +445,96 @@ void *handle_request(void *cli_socket)
 	recv(socket,buf,MAXSIZE,0);
 	
 	//Giai ma request ra
-	//B3: Tinh toan va check semaphore
+	Request rq = unpackMyRequest(buf);
+	free(buf);
+	int cost = 0, remain = 0;
 	
+	//B3: Tinh toan va check semaphore
+	switch (rq.route):
+	{
+		case HCM_HN.code:
+		
+			printf("\nClient requests HCM-HN\n");
+			for(int i=0; i<SO_LOAI; i++)
+			{
+				if(rq.type == i)
+				{
+					if(rq.number <= HCM_HN.l[i].number)
+					{
+						pthread_mutex_lock(&myMutex);
+						HCM_HN.l[i].number -= rq.number;
+						pthread_mutex_unlock(&myMutex);
+						cost = rq.number * HCM_HN.l[i].price;
+					}
+					else
+						remain = HCM_HN.l[i].number;
+				}
+			}
+			break;
+			
+		case HCM_HUE.code:
+		
+			printf("\nClient requests HCM-HUE\n");
+			for(int i=0; i<SO_LOAI; i++)
+			{
+				if(rq.type == i)
+				{
+					if(rq.number <= HCM_HUE.l[i].number)
+					{
+						pthread_mutex_lock(&myMutex);
+						HCM_HUE.l[i].number -= rq.number;
+						pthread_mutex_unlock(&myMutex);
+						cost = rq.number * HCM_HUE.l[i].price;
+					}
+					else
+						remain = HCM_HUE.l[i].number;
+				}
+			}
+			break;
+			
+		case HCM_DALAT.code:
+		
+			printf("\nClient requests HCM-DALAT\n");
+			for(int i=0; i<SO_LOAI; i++)
+			{
+				if(rq.type == i)
+				{
+					if(rq.number <= HCM_DALAT.l[i].number)
+					{
+						pthread_mutex_lock(&myMutex);
+						HCM_DALAT.l[i].number -= rq.number;
+						pthread_mutex_unlock(&myMutex);
+						cost = rq.number * HCM_DALAT.l[i].price;
+					}
+					else
+						remain = HCM_DALAT.l[i].number;
+				}
+			}
+			break;
+	}
+	printRequest(rq);
+	
+	if(cost != 0)
+	{
+		printf("Client da mua thanh cong: %d ve\n",rq.number);
+		printf("Gia tien: %d USD\n",cost);	
+	}
+	else
+	{
+		printf("Het ve!! :'(\n");
+		printf("Bao lai cho client biet la het ve\n");
+		//cost = -1;		//Bat flag len
+	}
+
 	//B4: Tra ket qua (ok hoac ko)
-	//Thread
+	send(socket,&cost,sizeof(cost),0)
+	if(cost > 0)
+	{
+		send(socket,&reamain,sizeof(remain),0);
+	}	
+
+	close(socket);
+	pthread_exit(NULL);
 }
 
 
