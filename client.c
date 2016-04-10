@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 #include <pthread.h>
 //--------------------END OF INCLUDE-----------------------
 
@@ -17,15 +18,11 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT "16000"					//Port mac dinh cho server
+#define PORT "16000"				//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
 #define MAXSIZE 4096
-
-//~ #define HCM-HaNoi 1
-//~ #define HCM-Hue 2
-//~ #define HCM-DaLat 3
 //--------------------END OF DEFINE------------------------
 
 
@@ -41,9 +38,6 @@ typedef struct Route
 {
 	int code;			//Ma danh dau tuyen xe
 	Type l [SO_LOAI];
-	//Type A = l[0]
-	//Type B = l[1]
-	//Type C = l[2]
 }Route;
 
 typedef struct Request
@@ -63,13 +57,101 @@ Route HCM_HN, HCM_HUE, HCM_DALAT;
 pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 //------------------------END OF GVs-----------------------
 
+
 //------------------------PROTOTYPES-----------------------
 //Ham set cac gia tri mac dinh cho server
 void initInfo();
-int createTCPserverSocket(char *host, int port, struct addrinfo hints);
+void printRouteInfo(Route rt);
+void printRequest(Request rq);
 int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
 void *handle_request(void *cli_socket);
+
+unsigned char *packInt(int a);
+int unpackInt(unsigned char *buf);
+
+unsigned char *packMyRequest(Request rq);
+Request unpackMyRequest(unsigned char *buf);
+
+unsigned char *packMyStruct(Route route);
+Route unpackMyStruct(unsigned char *buf);
+//---------------------END OF PROTOTYPES-------------------
+
+
+int main()
+{
+	printf("Hello, this is Ticket Client\n");
+	
+	int clientSock;
+	int retcode;
+	struct addrinfo hints, *p;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;		//hay AF_INET cung dc
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	
+	//printf("Track 0\n");
+	if( (retcode = getaddrinfo(NULL,PORT,&hints,&p)) != 0)
+	{
+		fprintf(stderr,"Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
+		//printf("Failed at getaddrinfo()\n");
+		//freeaddrinfo(hints);
+		exit(-1);
+	}
+	//printf("Track 1\n");
+	
+	//clientSock = createTCPsocket();
+	clientSock = socket(p->ai_family,p->ai_socktype,p->ai_protocol);
+	if(clientSock == -1)
+	{
+		fprintf(stderr,"Failed at socket(): %s\n",gai_strerror(errno));
+	}
+	
+	if(connect(clientSock,p->ai_addr, p->ai_addrlen) < 0)
+	{
+		printf("Cannot connect to %s - %d\n",LOCAL_HOST,PORT);
+		//freeaddrinfo(hints);
+		exit(-1);
+	}
+	printf("Connected to server!");
+	
+	unsigned char *buf = (unsigned char *)malloc(sizeof(Route) + 1);
+	//recv 3 struct
+	retcode = recv(clientSock,buf,sizeof(Route) + 1, 0);
+	printf("Sizeof (recv): %d\n",retcode);
+	HCM_HN = unpackMyStruct(buf);
+	printf("Track 4\n");
+	retcode = recv(clientSock,buf,sizeof(Route) + 1, 0);
+	printf("Sizeof (recv): %d\n",retcode);
+	HCM_HUE = unpackMyStruct(buf);
+	printf("Track 5\n");
+	retcode = recv(clientSock,buf,sizeof(Route) + 1, 0);
+	printf("Sizeof (recv): %d\n",retcode);
+	HCM_DALAT = unpackMyStruct(buf);
+	printf("Track 6\n");
+	
+	printRouteInfo(HCM_HN);
+	printRouteInfo(HCM_HUE);
+	printRouteInfo(HCM_DALAT);
+	
+	//Ga gam khach hang
+	printf("Moi chon chuyen xe can mua\n");
+	printf("1/ HCM - Ha Noi\n 2/ HCM - Hue\n 3/ HCM - Da Lat\n\n");
+	printf("Moi chon (bam 1, 2 hoac 3): \n");
+	int choice = 0;
+	scanf("%d",&choice);
+	
+	//send  1 request
+	Request rq;
+	//send(rq);
+	
+	//recv 1 (2) result
+	//recv
+	//recv
+	exit(0);
+}
+//-----------------------Het ham main()------------------------
 
 unsigned char *packInt(int a)
 {
@@ -93,8 +175,6 @@ void cp(char *dest, char *src, int offset, int len)
 	for(int i=0; i<len; i++)
 	{
 		dest[i+offset] = src[i];
-		//printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
-		//printf("Src[%d] = %d\n",i,(int)src[i]);
 	}
 }
 
@@ -116,7 +196,6 @@ unsigned char *packMyRequest(Request rq)
 	
 	temp = packInt(rq.number);
 	cp(buf,temp,offset,4);
-	//offset += 4;
 	free(temp);
 	return buf;
 }
@@ -238,91 +317,6 @@ void printRequest(Request rq)
 }
 
 
-int createTCPsocket()
-{	
-	int mySocket;
-	//struct addrinfo hints;
-	
-	//memset(&hint, 0, sizeof(hints));
-	//hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
-	//hints.ai_socktype = SOCK_STREAM;
-	
-	if( (mySocket = socket(PF_INET, SOCK_STREAM, 0)) == -1)
-	{
-		printf("Failed to create socket()\n");
-		return -1;
-	}	
-	
-	//freeaddrinfo(hints);
-	return mySocket;
-}
-//---------------------END OF PROTOTYPES-------------------
 
 
-int main()
-{
-	printf("Hello, this is Ticket Client\n");
-	
-	int clientSock;
-	int retcode;
-	struct addrinfo hints, *p;
-	
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
-	hints.ai_socktype = SOCK_STREAM;
-	
-	//char tmpBuf[33];
-	//snprintf(tmpBuf, 33, "%d", PORT);
-	printf("Track 0\n");
-	if( (retcode = getaddrinfo(LOCAL_HOST,PORT,&hints,&p)) != 0)
-	{
-		fprintf(stderr,"Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
-		//printf("Failed at getaddrinfo()\n");
-		//freeaddrinfo(hints);
-		exit(-1);
-	}
-	printf("Track 1\n");
-	
-	clientSock = createTCPsocket();
-	
-	if(connect(clientSock,p->ai_addr, p->ai_addrlen) < 0)
-	{
-		printf("Cannot connect to %s - %d\n",LOCAL_HOST,PORT);
-		//freeaddrinfo(hints);
-		exit(-1);
-	}
-	printf("Track 3\n");
-	
-	unsigned char *buf = (unsigned char *)malloc(sizeof(Route) + 1);
-	//recv 3 struct
-	retcode = recv(clientSock,buf,sizeof(Route) + 1, 0);
-	printf("Sizeof (recv): %d\n",retcode);
-	HCM_HN = unpackMyStruct(buf);
-	printf("Track 4\n");
-	recv(clientSock,buf,sizeof(Route) + 1, 0);
-	HCM_HUE = unpackMyStruct(buf);
-	printf("Track 5\n");
-	recv(clientSock,buf,sizeof(Route) + 1, 0);
-	HCM_DALAT = unpackMyStruct(buf);
-	printf("Track 6\n");
-	
-	printRouteInfo(HCM_HN);
-	printRouteInfo(HCM_HUE);
-	printRouteInfo(HCM_DALAT);
-	
-	//Ga gam khach hang
-	printf("Moi chon chuyen xe can mua\n");
-	printf("1/ HCM - Ha Noi\n 2/ HCM - Hue\n 3/ HCM - Da Lat\n\n");
-	printf("Moi chon (bam 1, 2 hoac 3): \n");
-	int choice = 0;
-	scanf("%d",&choice);
-	
-	//send  1 request
-	Request rq;
-	//send(rq);
-	
-	//recv 1 (2) result
-	//recv
-	//recv
-	exit(0);
-}
+

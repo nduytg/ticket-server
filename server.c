@@ -168,10 +168,12 @@ unsigned char *packMyStruct(Route route)
 	
 	buf[sizeof(Route)] = '\0';
 	
+	/*
 	for(int i=0; i<29; i++)
 	{
 		printf("Buf[%d] = %d\n",i,(int)buf[i]);
 	}
+	*/
 	return buf;
 }
 
