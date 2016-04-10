@@ -17,7 +17,7 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT 60000					//Port mac dinh cho server
+#define PORT "60000"					//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
@@ -271,10 +271,10 @@ int main()
 	hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
 	hints.ai_socktype = SOCK_STREAM;
 	
-	char tmpBuf[33];
-	snprintf(tmpBuf, 33, "%d", PORT);
+	//char tmpBuf[33];
+	//snprintf(tmpBuf, 33, "%d", PORT);
 	printf("Track 0\n");
-	if( (retcode = getaddrinfo(LOCAL_HOST,tmpBuf,&hints,&p)) != 0)
+	if( (retcode = getaddrinfo(LOCAL_HOST,PORT,&hints,&p)) != 0)
 	{
 		fprintf(stderr,"Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
 		//printf("Failed at getaddrinfo()\n");

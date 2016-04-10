@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -17,15 +18,12 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT 60000					//Port mac dinh cho server
+#define PORT "50000"				//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
 #define MAXSIZE 4096
 
-//~ #define HCM-HaNoi 1
-//~ #define HCM-Hue 2
-//~ #define HCM-DaLat 3
 //--------------------END OF DEFINE------------------------
 
 
@@ -41,9 +39,6 @@ typedef struct Route
 {
 	int code;			//Ma danh dau tuyen xe
 	Type l [SO_LOAI];
-	//Type A = l[0]
-	//Type B = l[1]
-	//Type C = l[2]
 }Route;
 
 typedef struct Request
@@ -63,10 +58,12 @@ Route HCM_HN, HCM_HUE, HCM_DALAT;
 pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 //------------------------END OF GVs-----------------------
 
+
 //------------------------PROTOTYPES-----------------------
 //Ham set cac gia tri mac dinh cho server
 void initInfo();
-int createTCPserverSocket(char *host, int port, struct addrinfo hints);
+
+//int createTCPserverSocket(char *host, char* port, struct addrinfo hints);
 int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
 void *handle_request(void *cli_socket);
@@ -240,43 +237,60 @@ void printRequest(Request rq)
 
 int main()
 {
-	//Khoi tao cac bien toan cuc
+	printf("Server cong ty duong sat X\n");
+	//Khoi tao gia tri cac bien toan cuc
 	initInfo();
-	
-	//**Chay thu thread voi tham so don gian**
-	/*
-	for(t = 0; t < POOL_SIZE; t++)
-	{
-		printf("In main: creating thread: %ld\n",t);
-		retcode = pthread_create(&threads[t], NULL, printHello, (void*)t);
-		if(retcode)
-		{
-			printf("Error, return code form pthread_create() is %d\n",retcode);
-			exit(-1);
-		}
-	}
-	//pthead_exit(NULL);
-	exit(1);
-	* */
-	//*********Ket thuc chay thu**************
 		
-	int retcode;
+	int retcode = 0;
 	int server_socket;
 	int ticket_client;
-	struct addrinfo hints;
-	printf("Server cong ty duong sat X\n");
+	struct addrinfo hints, *p;
 
 	//Create and bind in this function
-	server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
+	//server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
+	memset(&hints,0,sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_protocol = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	
+	if( (retcode = getaddrinfo(NULL,PORT,&hints,&p)) != 0 )
+	{
+		fprintf(stderr, "Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
+		exit(-1);
+	}
+	
+	if ( (server_socket = socket(p->ai_family,p->ai_socktype, p->ai_protocol) == -1 ) )
+	{
+		fprintf(stderr, "Failed at socket(): %s\n", gai_strerror(retcode));
+		exit(-1);
+	}
+	
+	if ( (retcode = bind(server_socket,p->ai_addr, p->ai_addrlen) == -1) )
+	{
+		fprintf(stderr, "Failed at bind(): %s\n", gai_strerror(retcode));
+		exit(-1);
+	}
+	
+	//retcode = getaddrinfo(
+	freeaddrinfo(&hints);
 	printf("Track 1\n");
 	listen(server_socket, BACKLOG);
 	
 	//Accept ket noi tu day
 	pthread_t thread_id;
+	int count = 0;
 	while(1)
 	{
+		count++;
 		struct sockaddr_storage client_addr;
 		ticket_client = acceptTCPsocket(server_socket, client_addr);
+		if(ticket_client < 0)
+		{
+			printf("Failed at accept()\n");
+			exit(-1);
+			
+		}
+		printf("Client #%d connected\n",count);
 		
 		printf("Ticket client socket: %d\n",ticket_client);
 		//Thread -> handle_request
@@ -291,8 +305,8 @@ int main()
 	};
 	
 	close(server_socket);
-	pthread_mutex_destroy(&myMutex);
-	pthead_exit(NULL);
+	//pthread_mutex_destroy(&myMutex);
+	//pthead_exit(NULL);
 	exit(0);
 }
 //-------------------Het ham main--------------------------------
@@ -326,52 +340,69 @@ void initInfo()
 	//--------------
 }
 
-int createTCPserverSocket(char *host, int port, struct addrinfo hints)
+/*
+int createTCPserverSocket(char *host, char *port, struct addrinfo hints)
 {	
 	int retcode;
 	int mySocket;
 	struct addrinfo *p;
+	char *ip[INET_ADDRSTRLEN];
 	
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
 	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
 	
 	if(host == NULL)
 	{
 		printf("Set to default host: localhost\n");
 		host = LOCAL_HOST;
 	}
-	
-	if(port <= 1024 || port > 65535)
-	{
-		printf("Invalid port, set to default port: %d\n",PORT);
-		port = port;
-	}
 		
-	char tmpBuf[33];
-	snprintf(tmpBuf, 33, "%d", PORT);
-	if((retcode = getaddrinfo(host, tmpBuf, &hints, &p)) != 0)
+	//getaddrinfo(host, port, &hints, &p))
+	if((retcode = getaddrinfo(NULL, port, &hints, &p)) != 0)
 	{
 		printf("Failed to getaddrinfo()\n");
 		return -1;
 	}
 	
+	inet_ntop(p->ai_family, &(((struct sockaddr_in *)p->ai_addr)->sin_addr),ip,INET_ADDRSTRLEN);
+	printf("Server IP: %s - Port: %s\n",ip,port);
+	
+	printf("Track 25\n");
 	if( (mySocket = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
 	{
 		printf("Failed to create socket()\n");
 		return -1;
+		//continue;
 	}	
 	
-	if ( (bind(mySocket, p->ai_addr, p->ai_addrlen)) < 0 )
+	
+	printf("Track 26\n");
+	int yes = 1;
+	if (setsockopt(mySocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+	{
+		printf("Failed at setsockopt()\n");
+		return -1;
+	}
+	
+	printf("Track 27\n");
+	if ( (retcode = bind(mySocket, p->ai_addr, p->ai_addrlen)) < 0 )
 	{
 		close(mySocket);
-		printf("Failed to bind socket\n");
+		printf("Retcode: %d\n",retcode);
+		fprintf(stderr,"Failed at bind(): %s\n", gai_strerror(retcode));
+		//printf("Failed to bind socket\n");
 		return -1;
-	}	
+		//continue;
+	}
+	printf("Track 28\n");	
 	
-	//freeaddrinfo(hints);
+
+	freeaddrinfo(&hints);
 	return mySocket;
 }
+*/
 
 int createTCPsocket()
 {	
@@ -410,24 +441,31 @@ void *handle_request(void *cli_socket)
 	printf("Handle_request() with socket: %d\n",socket);
 	
 	//B1: Send thong tin ve cho client
+	//Send 3 struct da duoc dong goi san!!
 	unsigned char *buf;
+	printf("Track 1\n");
 	buf = packMyStruct(HCM_HN);
-	send(socket,buf,sizeof(buf),0);
+	send(socket, buf, sizeof(buf), 0);
 	free(buf);
 	
+	printf("Track 2\n");
 	buf = packMyStruct(HCM_HUE);
-	send(socket,buf,sizeof(buf),0);
+	send(socket, buf, sizeof(buf), 0);
 	free(buf);
 	
+	printf("Track 3\n");
 	buf = packMyStruct(HCM_DALAT);
-	send(socket,buf,sizeof(buf),0);
+	send(socket, buf, sizeof(buf), 0);
 	free(buf);
 	
 	//B2: Nhan request tu client
+	printf("Track 4\n");
 	buf = (unsigned char*)malloc(MAXSIZE);
-	recv(socket,buf,MAXSIZE,0);
+	recv(socket, buf,MAXSIZE,0);
+	
 	
 	//Giai ma request ra
+	printf("Track 5\n");
 	Request rq = unpackMyRequest(buf);
 	free(buf);
 	int cost = 0, remain = 0;
@@ -494,6 +532,9 @@ void *handle_request(void *cli_socket)
 				}
 			}
 			break;
+		default:
+			printf("Request is invalid\n");
+			printf("Plz try again\n");
 	}
 	printRequest(rq);
 	
@@ -517,6 +558,8 @@ void *handle_request(void *cli_socket)
 	}	
 
 	close(socket);
+	printf("Closed thread - Flag 1!\n");
 	pthread_exit(NULL);
+	printf("Closed thread - Flag 2!\n");
 }
 
