@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 #include <pthread.h>
 //--------------------END OF INCLUDE-----------------------
 
@@ -18,7 +19,7 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT "50000"				//Port mac dinh cho server
+#define PORT "16000"				//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
@@ -248,32 +249,44 @@ int main()
 
 	//Create and bind in this function
 	//server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
-	memset(&hints,0,sizeof(hints));
+	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
-	hints.ai_protocol = SOCK_STREAM;
+	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	
-	if( (retcode = getaddrinfo(NULL,PORT,&hints,&p)) != 0 )
+	if( (retcode = getaddrinfo(NULL, PORT, &hints, &p)) != 0 )
 	{
 		fprintf(stderr, "Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
 		exit(-1);
 	}
 	
-	if ( (server_socket = socket(p->ai_family,p->ai_socktype, p->ai_protocol) == -1 ) )
+	server_socket = socket(p->ai_family,p->ai_socktype, p->ai_protocol);
+	
+	if ( server_socket == -1 )
 	{
 		fprintf(stderr, "Failed at socket(): %s\n", gai_strerror(retcode));
 		exit(-1);
 	}
 	
-	if ( (retcode = bind(server_socket,p->ai_addr, p->ai_addrlen) == -1) )
+	int yes = 1;
+	//reuse port
+	if( (retcode = setsockopt(server_socket,SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1 ))
 	{
-		fprintf(stderr, "Failed at bind(): %s\n", gai_strerror(retcode));
+		fprintf(stderr, "Failed at socket(): %s\n", gai_strerror(retcode));
+		close(server_socket);
+		exit(-1);
+	}
+	
+	if ( (retcode = bind(server_socket,p->ai_addr, p->ai_addrlen)) == -1)
+	{
+		fprintf(stderr, "Failed at bind(): %s\n", gai_strerror(errno));
+		close(server_socket);
 		exit(-1);
 	}
 	
 	//retcode = getaddrinfo(
-	freeaddrinfo(&hints);
-	printf("Track 1\n");
+	//freeaddrinfo(&hints);
+	//printf("Track 1\n");
 	listen(server_socket, BACKLOG);
 	
 	//Accept ket noi tu day
@@ -283,7 +296,11 @@ int main()
 	{
 		count++;
 		struct sockaddr_storage client_addr;
-		ticket_client = acceptTCPsocket(server_socket, client_addr);
+		//ticket_client = acceptTCPsocket(server_socket, client_addr);
+		socklen_t len;
+		ticket_client = accept(server_socket, (struct sockaddr*)&client_addr, &len);
+		
+		
 		if(ticket_client < 0)
 		{
 			printf("Failed at accept()\n");
@@ -294,7 +311,7 @@ int main()
 		
 		printf("Ticket client socket: %d\n",ticket_client);
 		//Thread -> handle_request
-		if (pthread_create(&thread_id, NULL, handle_request, (void*) &ticket_client) < 0)
+		if (pthread_create(&thread_id, NULL, handle_request, (void*) ticket_client) < 0)
 		{
 			printf("Failed when created thread\n");
 			//exit(1);

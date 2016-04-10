@@ -17,7 +17,7 @@
 //------------------------DEFINE--------------------------
 #define POOL_SIZE 10				//Thread pool size
 #define LOCAL_HOST "127.0.0.1"		//Local host IP
-#define PORT "60000"					//Port mac dinh cho server
+#define PORT "16000"					//Port mac dinh cho server
 #define BACKLOG 10
 #define SO_CHUYEN 3
 #define SO_LOAI 3
