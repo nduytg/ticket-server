@@ -261,18 +261,27 @@ int createTCPsocket()
 
 int main()
 {
-	int clientSock;
-	struct addrinfo hints, *p;
-	
 	printf("Hello, this is Ticket Client\n");
 	
-	if( getaddrinfo(LOCAL_HOST,PORT,&hints,&p) != 0)
+	int clientSock;
+	int retcode;
+	struct addrinfo hints, *p;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
+	hints.ai_socktype = SOCK_STREAM;
+	
+	char tmpBuf[33];
+	snprintf(tmpBuf, 33, "%d", PORT);
+	printf("Track 0\n");
+	if( (retcode = getaddrinfo(LOCAL_HOST,tmpBuf,&hints,&p)) != 0)
 	{
-		printf("Failed at getaddrinfo()\n");
+		fprintf(stderr,"Failed at getaddrinfo(): %s\n", gai_strerror(retcode));
+		//printf("Failed at getaddrinfo()\n");
 		//freeaddrinfo(hints);
 		exit(-1);
 	}
-	
+	printf("Track 1\n");
 	
 	clientSock = createTCPsocket();
 	
@@ -282,15 +291,20 @@ int main()
 		//freeaddrinfo(hints);
 		exit(-1);
 	}
+	printf("Track 3\n");
 	
 	unsigned char *buf = (unsigned char *)malloc(sizeof(Route) + 1);
 	//recv 3 struct
-	recv(clientSock,buf,sizeof(Route) + 1, 0);
+	retcode = recv(clientSock,buf,sizeof(Route) + 1, 0);
+	printf("Sizeof (recv): %d\n",retcode);
 	HCM_HN = unpackMyStruct(buf);
+	printf("Track 4\n");
 	recv(clientSock,buf,sizeof(Route) + 1, 0);
 	HCM_HUE = unpackMyStruct(buf);
+	printf("Track 5\n");
 	recv(clientSock,buf,sizeof(Route) + 1, 0);
 	HCM_DALAT = unpackMyStruct(buf);
+	printf("Track 6\n");
 	
 	printRouteInfo(HCM_HN);
 	printRouteInfo(HCM_HUE);
@@ -301,7 +315,7 @@ int main()
 	printf("1/ HCM - Ha Noi\n 2/ HCM - Hue\n 3/ HCM - Da Lat\n\n");
 	printf("Moi chon (bam 1, 2 hoac 3): \n");
 	int choice = 0;
-	scanf("%d",choice);
+	scanf("%d",&choice);
 	
 	//send  1 request
 	Request rq;

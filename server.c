@@ -259,34 +259,6 @@ int main()
 	exit(1);
 	* */
 	//*********Ket thuc chay thu**************
-	
-	//----Chay thu pack voi unpackMystruct----
-	/*
-	unsigned char *buf;
-	printRouteInfo(HCM_HN);
-	buf = packMyStruct(HCM_HN);
-	HCM_HN = unpackMyStruct(buf);
-	printf("\n\nGia tri sau khi pack-unpack\n\n");
-	printRouteInfo(HCM_HN);
-	free(buf);
-	*/
-	
-	//Chay thu pack-unpack request
-	/*
-	unsigned char *buf;
-	Request rq;
-	rq.route = 1;
-	rq.type = 1;
-	rq.number = 90;
-	printRequest(rq);
-	buf = packMyRequest(rq);
-	
-	Request nrq = unpackMyRequest(buf);
-	printRequest(nrq);
-	free(buf);
-	exit(0);
-	*/
-	//----------------------------------------
 		
 	int retcode;
 	int server_socket;
@@ -306,6 +278,7 @@ int main()
 		struct sockaddr_storage client_addr;
 		ticket_client = acceptTCPsocket(server_socket, client_addr);
 		
+		printf("Ticket client socket: %d\n",ticket_client);
 		//Thread -> handle_request
 		if (pthread_create(&thread_id, NULL, handle_request, (void*) &ticket_client) < 0)
 		{
@@ -375,9 +348,9 @@ int createTCPserverSocket(char *host, int port, struct addrinfo hints)
 		port = port;
 	}
 		
-	//char buffer[20];
-	//itoa(port,buffer,10);
-	if((retcode = getaddrinfo(host, port, &hints, &p)) != 0)
+	char tmpBuf[33];
+	snprintf(tmpBuf, 33, "%d", PORT);
+	if((retcode = getaddrinfo(host, tmpBuf, &hints, &p)) != 0)
 	{
 		printf("Failed to getaddrinfo()\n");
 		return -1;
@@ -423,7 +396,7 @@ int acceptTCPsocket(int serverSock, struct sockaddr_storage addr)
 {
 	socklen_t addr_size = sizeof(addr);
 	int newSock = accept(serverSock,(struct sockaddr *)&addr, &addr_size);
-	if (newSock == -1)
+	if (newSock < 0)
 	{
 		printf("Failed at accept()\n");
 		return -1;
@@ -547,47 +520,3 @@ void *handle_request(void *cli_socket)
 	pthread_exit(NULL);
 }
 
-
-/*
-void *printHello(void *threadid)
-{
-	long tid;
-	tid = (long)threadid;
-	printf("Hello World! It's me, thread #%ld!\n",tid);
-	pthread_exit(NULL);
-}
-* 
-void threadSample()
-{
-	int retcode;
-	pthread_t threadID;
-	pthread_attr_t attr;
-	
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	
-	for(int i = 0; i < POOL_SIZE; i++)
-	{
-		retcode = pthread_create(&tid, &attr, do_nothing, NULL);
-		if (retcode)
-		{
-			printf("Error: return code from pthread_create() is: %d\n",retcode);
-			exit(-1);
-		}
-		//else	
-		
-		//Wait for thread
-		
-		retcode = pthread_join(tid, NULL);
-		
-		if (retcode)
-		{
-			printf("Error: return code from pthread_join() is: %d\n",retcode);
-			exit(-1);
-		}
-	}
-	
-	pthread_attr_destroy(&attr);
-	pthread_exit(NULL);
-}
-*/
