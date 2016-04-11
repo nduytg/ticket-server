@@ -69,188 +69,32 @@ int createTCPsocket();
 int acceptTCPsocket(int serverSock, struct sockaddr_storage addr);
 void *handle_request(void *cli_socket);
 
-unsigned char *packInt(int a)
-{
-	char *buf = (char*)malloc(sizeof(int) + 1);
-	buf[0] = a>>24;
-	buf[1] = a>>16;
-	buf[2] = a>>8;
-	buf[3] = a;
-	buf[4] = '\0';
-	return buf;
-}
-
-int unpackInt(unsigned char *buf)
-{
-	return ((buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
-}
-
 //Ham memcpy tu che ^^
-void cp(char *dest, char *src, int offset, int len)
-{
-	for(int i=0; i<len; i++)
-	{
-		dest[i+offset] = src[i];
-		//printf("Dest[%d] = %d\t",i+offset,(int)dest[i+offset]);
-		//printf("Src[%d] = %d\n",i,(int)src[i]);
-	}
-}
+void cp(char *dest, char *src, int offset, int len);
 
-unsigned char *packMyRequest(Request rq)
-{
-	unsigned char *buf = (unsigned char*)malloc(sizeof(Request) + 1);
-	unsigned char *temp;
-	int offset = 0;
-	
-	temp = packInt(rq.route);
-	cp(buf,temp,offset,4);
-	offset += 4;
-	free(temp);
-	
-	temp = packInt(rq.type);
-	cp(buf,temp,offset,4);
-	offset += 4;
-	free(temp);
-	
-	temp = packInt(rq.number);
-	cp(buf,temp,offset,4);
-	//offset += 4;
-	free(temp);
-	return buf;
-}
-
-Request unpackMyRequest(unsigned char *buf)
-{
-	Request rq;
-	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
-	unsigned char *pt;		//con tro de luu vi tri unpack
-	pt = buf;
-	
-	cp(tmp,pt,0,4);
-	rq.route = unpackInt(tmp);
-	pt += 4;
-	
-	cp(tmp,pt,0,4);
-	rq.type = unpackInt(tmp);
-	pt += 4;
-	
-	cp(tmp,pt,0,4);
-	rq.number = unpackInt(tmp);
-	//pt += 4;
-	
-	free(tmp);
-	return rq;
-}
-
-unsigned char *packMyStruct(Route route)
-{
-	unsigned char *buf = (unsigned char*)malloc(sizeof(Route) + 1);
-	unsigned char *temp;
-	int offset = 0;
-	
-	temp = packInt(route.code);
-	cp(buf,temp,offset,4);
-	offset += 4;
-	free(temp);
-	
-	for(int i = 0; i < SO_LOAI; i++)
-	{
-		temp = packInt(route.l[i].number);
-		cp(buf,temp,offset, 4);
-		offset+=4;
-		free(temp);
-
-		temp = packInt(route.l[i].price);
-		cp(buf,temp,offset, 4);
-		offset+=4;
-		free(temp);
-	}
-	
-	buf[sizeof(Route)] = '\0';
-	
-	/*
-	for(int i=0; i<29; i++)
-	{
-		printf("Buf[%d] = %d\n",i,(int)buf[i]);
-	}
-	*/
-	return buf;
-}
-
-Route unpackMyStruct(unsigned char *buf)
-{
-	Route rt;
-	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
-	unsigned char *pt;		//con tro de luu vi tri unpack
-	pt = buf;
-	
-	cp(tmp,pt,0,4);
-	pt += 4;
-	rt.code = unpackInt(tmp);
-	//printf("Rt.code = %d\n",rt.code);
-	
-	for(int i = 0; i < SO_LOAI; i++)
-	{
-		cp(tmp,pt,0,4);
-		pt+=4;
-		rt.l[i].number = unpackInt(tmp);
-		
-		cp(tmp,pt,0,4);
-		pt+=4;
-		rt.l[i].price = unpackInt(tmp);
-	}
-	free(tmp);
-	return rt;
-}
-
-void printRouteInfo(Route rt)
-{
-	if(rt.code == 1)
-		printf("Tuyen HCM - Ha Noi\n");
-	if(rt.code == 2)
-		printf("Tuyen HCM - Hue\n");
-	if(rt.code == 3)
-		printf("Tuyen HCM - Da Lat\n");
-	//printf("Route %d\n",rt.code);
-	printf("Bieu gia ve\n");
-	
-	for(int i=0; i<SO_LOAI; i++)
-	{
-		if(i==0)
-			printf("Ve loai A: ");
-		if(i==1)
-			printf("Ve loai B: ");
-		if(i==2)
-			printf("Ve loai C: ");
-			
-		printf("%d ve - Gia: %d USD\n",rt.l[i].number, rt.l[i].price);
-	}
-	printf("----------------------------------\n\n");
-}
-
-void printRequest(Request rq)
-{
-	printf("\n----REQUEST----\n");
-	printf("Loai chuyen: %d\n",rq.route);
-	printf("Loai ve: %d\n",rq.type);
-	printf("Gia ve: %d\n\n",rq.number);
-}
+//Cac ham dong goi du lieu de goi qua Socket
+unsigned char *packInt(int a);
+int unpackInt(unsigned char *buf);
+unsigned char *packMyRequest(Request rq);
+Request unpackMyRequest(unsigned char *buf);
+unsigned char *packMyStruct(Route route);
+Route unpackMyStruct(unsigned char *buf);
+void printRouteInfo(Route rt);
+void printRequest(Request rq);
 //---------------------END OF PROTOTYPES-------------------
 
 
 int main()
 {
-	printf("Server cong ty duong sat X\n");
 	//Khoi tao gia tri cac bien toan cuc
 	initInfo();
+	printf("Server cong ty duong sat ABC\n");
 		
 	int retcode = 0;
 	int server_socket;
 	int ticket_client;
 	struct addrinfo hints, *p;
 
-	//Create and bind in this function
-	//server_socket = createTCPserverSocket(LOCAL_HOST,PORT,hints);
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
@@ -271,7 +115,6 @@ int main()
 	}
 	
 	int yes = 1;
-	//reuse port
 	if( (retcode = setsockopt(server_socket,SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1 ))
 	{
 		fprintf(stderr, "Failed at socket(): %s\n", gai_strerror(retcode));
@@ -286,9 +129,6 @@ int main()
 		exit(-1);
 	}
 	
-	//retcode = getaddrinfo(
-	//freeaddrinfo(&hints);
-	//printf("Track 1\n");
 	listen(server_socket, BACKLOG);
 	
 	//Accept ket noi tu day
@@ -298,7 +138,6 @@ int main()
 	{
 		count++;
 		struct sockaddr_storage client_addr;
-		//ticket_client = acceptTCPsocket(server_socket, client_addr);
 		socklen_t len;
 		ticket_client = accept(server_socket, (struct sockaddr*)&client_addr, &len);
 		
@@ -316,11 +155,10 @@ int main()
 		if (pthread_create(&thread_id, NULL, handle_request, (void*) ticket_client) < 0)
 		{
 			printf("Failed when created thread\n");
-			//exit(1);
+			exit(1);
 		}
 		//Join thread
-		pthread_join(thread_id, NULL);
-		
+		//pthread_join(thread_id, NULL);
 	};
 	
 	close(server_socket);
@@ -353,75 +191,11 @@ void initInfo()
 	//--------------
 	
 	//HCM_DALAT
-	HCM_HN.l[0].number = 70;	HCM_HN.l[0].price = 120;
-	HCM_HN.l[1].number = 50;	HCM_HN.l[1].price = 90;
-	HCM_HN.l[2].number = 30;	HCM_HN.l[2].price = 70;
+	HCM_DALAT.l[0].number = 70; HCM_DALAT.l[0].price = 120;
+	HCM_DALAT.l[1].number = 50;	HCM_DALAT.l[1].price = 90;
+	HCM_DALAT.l[2].number = 30;	HCM_DALAT.l[2].price = 70;
 	//--------------
 }
-
-/*
-int createTCPserverSocket(char *host, char *port, struct addrinfo hints)
-{	
-	int retcode;
-	int mySocket;
-	struct addrinfo *p;
-	char *ip[INET_ADDRSTRLEN];
-	
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;		//hay AF_INET cung dc
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-	
-	if(host == NULL)
-	{
-		printf("Set to default host: localhost\n");
-		host = LOCAL_HOST;
-	}
-		
-	//getaddrinfo(host, port, &hints, &p))
-	if((retcode = getaddrinfo(NULL, port, &hints, &p)) != 0)
-	{
-		printf("Failed to getaddrinfo()\n");
-		return -1;
-	}
-	
-	inet_ntop(p->ai_family, &(((struct sockaddr_in *)p->ai_addr)->sin_addr),ip,INET_ADDRSTRLEN);
-	printf("Server IP: %s - Port: %s\n",ip,port);
-	
-	printf("Track 25\n");
-	if( (mySocket = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-	{
-		printf("Failed to create socket()\n");
-		return -1;
-		//continue;
-	}	
-	
-	
-	printf("Track 26\n");
-	int yes = 1;
-	if (setsockopt(mySocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-	{
-		printf("Failed at setsockopt()\n");
-		return -1;
-	}
-	
-	printf("Track 27\n");
-	if ( (retcode = bind(mySocket, p->ai_addr, p->ai_addrlen)) < 0 )
-	{
-		close(mySocket);
-		printf("Retcode: %d\n",retcode);
-		fprintf(stderr,"Failed at bind(): %s\n", gai_strerror(retcode));
-		//printf("Failed to bind socket\n");
-		return -1;
-		//continue;
-	}
-	printf("Track 28\n");	
-	
-
-	freeaddrinfo(&hints);
-	return mySocket;
-}
-*/
 
 int createTCPsocket()
 {	
@@ -456,37 +230,27 @@ int acceptTCPsocket(int serverSock, struct sockaddr_storage addr)
 
 void *handle_request(void *cli_socket)
 {
+	int retcode = 0;
 	int socket = (int)cli_socket;
 	printf("Handle_request() with socket: %d\n",socket);
 	
 	//B1: Send thong tin ve cho client
 	//Send 3 struct da duoc dong goi san!!
-	unsigned char *buf;
-	printf("Track 1\n");
-	buf = packMyStruct(HCM_HN);
-	send(socket, buf, sizeof(buf), 0);
-	free(buf);
+	unsigned char buf, *buf1, *buf2, *buf3;
 	
-	printf("Track 2\n");
-	buf = packMyStruct(HCM_HUE);
-	send(socket, buf, sizeof(buf), 0);
-	free(buf);
+	retcode = send(socket, &HCM_HN, sizeof(Route), 0);
+	printf("Sent: %d\n",retcode);
+
+	retcode = send(socket, &HCM_HUE, sizeof(Route), 0);
+	printf("Sent: %d\n",retcode);
 	
-	printf("Track 3\n");
-	buf = packMyStruct(HCM_DALAT);
-	send(socket, buf, sizeof(buf), 0);
-	free(buf);
-	
+	retcode = send(socket, &HCM_DALAT, sizeof(Route), 0);
+	printf("Sent: %d\n",retcode);
+
 	//B2: Nhan request tu client
-	printf("Track 4\n");
-	buf = (unsigned char*)malloc(MAXSIZE);
-	recv(socket, buf,MAXSIZE,0);
-	
-	
-	//Giai ma request ra
-	printf("Track 5\n");
-	Request rq = unpackMyRequest(buf);
-	free(buf);
+	Request rq;
+	recv(socket, &rq,sizeof(rq),0);
+
 	int cost = 0, remain = 0;
 	
 	//B3: Tinh toan va check semaphore
@@ -571,7 +335,7 @@ void *handle_request(void *cli_socket)
 
 	//B4: Tra ket qua (ok hoac ko)
 	send(socket,&cost,sizeof(cost),0);
-	if(cost > 0)
+	if(cost <= 0)
 	{
 		send(socket,&remain,sizeof(remain),0);
 	}	
@@ -580,5 +344,162 @@ void *handle_request(void *cli_socket)
 	printf("Closed thread - Flag 1!\n");
 	pthread_exit(NULL);
 	printf("Closed thread - Flag 2!\n");
+}
+
+unsigned char *packInt(int a)
+{
+	char *buf = (char*)malloc(sizeof(int) + 1);
+	buf[0] = a>>24;
+	buf[1] = a>>16;
+	buf[2] = a>>8;
+	buf[3] = a;
+	buf[4] = '\0';
+	return buf;
+}
+
+int unpackInt(unsigned char *buf)
+{
+	return ((buf[0]<<24) | buf[1]<<16 | (buf[2]<<8) | buf[3]);
+}
+
+//Ham memcpy tu che ^^
+void cp(char *dest, char *src, int offset, int len)
+{
+	for(int i=0; i<len; i++)
+	{
+		dest[i+offset] = src[i];
+	}
+}
+
+unsigned char *packMyRequest(Request rq)
+{
+	unsigned char *buf = (unsigned char*)malloc(sizeof(Request) + 1);
+	unsigned char *temp;
+	int offset = 0;
+	
+	temp = packInt(rq.route);
+	cp(buf,temp,offset,4);
+	offset += 4;
+	free(temp);
+	
+	temp = packInt(rq.type);
+	cp(buf,temp,offset,4);
+	offset += 4;
+	free(temp);
+	
+	temp = packInt(rq.number);
+	cp(buf,temp,offset,4);
+	free(temp);
+	return buf;
+}
+
+Request unpackMyRequest(unsigned char *buf)
+{
+	Request rq;
+	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
+	unsigned char *pt;		//con tro de luu vi tri unpack
+	pt = buf;
+	
+	cp(tmp,pt,0,4);
+	rq.route = unpackInt(tmp);
+	pt += 4;
+	
+	cp(tmp,pt,0,4);
+	rq.type = unpackInt(tmp);
+	pt += 4;
+	
+	cp(tmp,pt,0,4);
+	rq.number = unpackInt(tmp);
+	
+	free(tmp);
+	return rq;
+}
+
+unsigned char *packMyStruct(Route route)
+{
+	unsigned char *buf = (unsigned char*)malloc(sizeof(Route) + 1);
+	unsigned char *temp;
+	int offset = 0;
+	
+	temp = packInt(route.code);
+	cp(buf,temp,offset,4);
+	offset += 4;
+	free(temp);
+	
+	for(int i = 0; i < SO_LOAI; i++)
+	{
+		temp = packInt(route.l[i].number);
+		cp(buf,temp,offset, 4);
+		offset+=4;
+		free(temp);
+
+		temp = packInt(route.l[i].price);
+		cp(buf,temp,offset, 4);
+		offset+=4;
+		free(temp);
+	}
+	
+	buf[sizeof(Route)] = '\0';
+	
+	return buf;
+}
+
+Route unpackMyStruct(unsigned char *buf)
+{
+	Route rt;
+	unsigned char *tmp = (unsigned char*)malloc(sizeof(int) + 1);
+	unsigned char *pt;		//con tro de luu vi tri unpack
+	pt = buf;
+	
+	cp(tmp,pt,0,4);
+	pt += 4;
+	rt.code = unpackInt(tmp);
+	//printf("Rt.code = %d\n",rt.code);
+	
+	for(int i = 0; i < SO_LOAI; i++)
+	{
+		cp(tmp,pt,0,4);
+		pt+=4;
+		rt.l[i].number = unpackInt(tmp);
+		
+		cp(tmp,pt,0,4);
+		pt+=4;
+		rt.l[i].price = unpackInt(tmp);
+	}
+	free(tmp);
+	return rt;
+}
+
+void printRouteInfo(Route rt)
+{
+	if(rt.code == 1)
+		printf("Tuyen HCM - Ha Noi\n");
+	if(rt.code == 2)
+		printf("Tuyen HCM - Hue\n");
+	if(rt.code == 3)
+		printf("Tuyen HCM - Da Lat\n");
+	//printf("Route %d\n",rt.code);
+	printf("Bieu gia ve\n");
+	
+	for(int i=0; i<SO_LOAI; i++)
+	{
+		if(i==0)
+			printf("Ve loai A: ");
+		if(i==1)
+			printf("Ve loai B: ");
+		if(i==2)
+			printf("Ve loai C: ");
+			
+		printf("%d ve - Gia: %d USD\n",rt.l[i].number, rt.l[i].price);
+	}
+	printf("----------------------------------\n\n");
+}
+
+void printRequest(Request rq)
+{
+	printf("\n----REQUEST----\n");
+	printf("Loai chuyen: %d\n",rq.route);
+	printf("Loai ve: %d\n",rq.type);
+	printf("Luong ve: %d\n\n",rq.number);
 }
 
